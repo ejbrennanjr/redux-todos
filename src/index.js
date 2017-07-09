@@ -1,5 +1,6 @@
 import 'babel-polyfill';
-import {createStore} from 'redux';
+//import {createStore} from 'redux';
+import {createStore} from 'createStore.ejb.js';
 
 
 const counter = (state=0, action) => {
@@ -12,6 +13,7 @@ const counter = (state=0, action) => {
             return state;
     }
 };
+
 
 const store = createStore(counter);
 
