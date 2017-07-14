@@ -2,6 +2,7 @@ import 'babel-polyfill';
 import React, {Component} from 'react';
 import ReactDOM from 'react-dom';
 import {createStore, combineReducers} from 'redux';
+import {Provider, connect} from 'react-redux';
 import expect from 'expect'; 
 import deepFreeze from 'deep-freeze';
 
@@ -80,7 +81,7 @@ const todoApp = combineReducers({
 //   }
 // };
 
-const store = createStore(todoApp);
+
 
 let nextTodoId = 0;
 
@@ -97,75 +98,134 @@ const getVisibleTodos = (todos, filter) => {
                 t => !t.completed
             );        
     }
-}
+};
 
+
+
+
+// -------------------------------------------------------
+// Action Creators
+// -------------------------------------------------------
+const addTodo = (text) => {
+    return {
+        type: 'ADD_TODO',
+        id: nextTodoId++,
+        text
+    };
+};
+
+const setVisibilityFilter = (filter) => {
+    return {
+        type: 'SET_VISIBILITY_FILTER',
+        filter
+    };
+};
+
+const toggleTodo = (id) => {
+    return {
+        type: 'TOGGLE_TODO',
+        id
+    };
+};
 
 // -------------------------------------------------------
 // Components
 // -------------------------------------------------------
 
-class TodoApp extends Component {
-    render() {
+// Here dispatch is destructerd from the props (see connect function below)
+// Notice that the AddTodo is a let which allows it be reassigned by the curried
+// connect call below. 
+let AddTodo = ({dispatch}) => {
+    let input;
 
-        const {
-            todos,
-            visibilityFilter
-        } = this.props;
+    return (
+        <div>
+            <input ref={node => {
+                input = node;
+            }} />
+            <button onClick={() => {
+                dispatch(addTodo(input.value));
+                input.value = '';
+            }}>
+                Add Todo
+            </button>
+        </div>
+    );
+};
 
-        const visibleTodos = getVisibleTodos(todos, visibilityFilter);
+// Connect is passed with null in both mapStateToProps and mapDispatchTo Props
+// As a result, component does not subscribe to the store and gets the dispatch 
+// function automatically mapped to the props.
+// Notice this is a curried function and the AddTodo variable is reassigned after connect.
+AddTodo = connect()(AddTodo);
 
-        return (
-            <div>
-                <input ref={node => {
-                    this.input = node;
-                }} />
-                <button onClick={() => {
-                        store.dispatch({
-                            type: 'ADD_TODO',
-                            text: this.input.value,
-                            id: nextTodoId++
-                        });
-                        this.input.value = '';
-                    }}>
-                        Add Todo
-                </button>
-                <ul>
-                    {visibleTodos.map(todo =>
-                        <li key={todo.id}
-                            onClick={() => {
-                                store.dispatch({
-                                    type: 'TOGGLE_TODO',
-                                    id: todo.id
-                                });
-                            }}
-                            style={{
-                                textDecoration: 
-                                    todo.completed ? 'line-through' : 'none'
-                            }}>
-                            {todo.text}
-                        </li>    
-                    )}
-                </ul>
-                <p>
-                    Show:
-                    {' '}
-                    <FilterLink filter='SHOW_ALL'
-                                currentFilter={visibilityFilter}>All</FilterLink>
-                    {' '}
-                    <FilterLink filter='SHOW_ACTIVE'
-                                currentFilter={visibilityFilter}>Active</FilterLink>
-                    {' '}
-                    <FilterLink filter='SHOW_COMPLETED'
-                                currentFilter={visibilityFilter}>Completed</FilterLink>
-                </p>
-            </div>
-        );
-    }
-}
+const Todo = ({onClick, completed, text}) => (
+    <li
+        onClick={onClick}
+        style={{
+            textDecoration: 
+                completed ? 'line-through' : 'none'
+        }}>
+        {text}
+    </li>    
+);
 
 
-const FilterLink = ({filter, currentFilter, children}) => {
-    if (filter === currentFilter) {
+const TodoList = ({todos, onTodoClick}) => (
+    <ul>
+        {todos.map(todo => 
+            <Todo 
+                key={todo.id}
+                {...todo}
+                onClick={() => onTodoClick(todo.id)}
+            />
+        )}
+    </ul>
+);
+
+
+
+
+
+const mapStateToTodoListProps = (state) => {
+    return {
+        todos: getVisibleTodos(
+            state.todos,
+            state.visibilityFilter
+        )
+    };
+};
+const mapDispatchToTodoListProps = (dispatch) => {
+    return {
+        onTodoClick: (id) => {
+            dispatch(toggleTodo(id));
+        }
+    };
+};
+const VisibleTodoList = connect(
+    mapStateToTodoListProps,
+    mapDispatchToTodoListProps
+)(TodoList);
+
+
+
+
+
+const Footer = () => (
+    <p>
+        Show:
+        {' '}
+        <FilterLink filter="SHOW_ALL">All</FilterLink>
+        {' '}
+        <FilterLink filter="SHOW_ACTIVE">Active</FilterLink>
+        {' '}
+        <FilterLink filter="SHOW_COMPLETED">Completed</FilterLink>
+    </p>
+);
+
+
+const Link = ({active, children, onClick}) => {
+    if (active) {
         return <span>{children}</span>;
     }
     
@@ -173,10 +233,7 @@ const FilterLink = ({filter, currentFilter, children}) => {
         <a href="#"
            onClick={e => {
                 e.preventDefault();
-                store.dispatch({
-                    type: 'SET_VISIBILITY_FILTER',
-                    filter
-                });
+                onClick();
            }}>
             {children}
         </a>
@@ -185,20 +242,80 @@ const FilterLink = ({filter, currentFilter, children}) => {
 
 
 
+
+
+
+const mapStateToLinkProps = (
+    state,
+    ownProps
+) => {
+    return {
+        active: ownProps.filter === 
+                    state.visibilityFilter
+    };
+};
+const mapDispatchToLinkProps = (
+    dispatch,
+    ownProps
+) => {
+    return {
+        onClick: () => {
+            dispatch(
+                setVisibilityFilter(ownProps.filter)
+            );
+        }
+    };
+};
+const FilterLink = connect(
+    mapStateToLinkProps,
+    mapDispatchToLinkProps
+)(Link);
+
+
+
+
+
+const TodoApp = () => (
+    <div>
+        <AddTodo />
+        <VisibleTodoList />
+        <Footer />
+
+    </div>
+);
+
+
+
+
+
+
+
 // -------------------------------------------------------
 // REACT-REDUX Configuration
 // -------------------------------------------------------
 
-const render = () => {
-    ReactDOM.render(
-        <TodoApp {...store.getState()} />,
-        document.getElementById('root')
+// class Provider extends Component {
+//     getChildContext() {
+//         return {
+//             store: this.props.store
+//         };
+//     }
 
-    );
-};
+//     render() {
+//         return this.props.children;
+//     }
+// }
+// Provider.childContextTypes = {
+//     store: React.PropTypes.object
+// }
 
-store.subscribe(render);
-render();
+ReactDOM.render(
+    <Provider store={createStore(todoApp)}>
+        <TodoApp />
+    </Provider>,
+    document.getElementById('root')
+
+);
 
 
 
