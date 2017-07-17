@@ -1,28 +1,18 @@
 import 'babel-polyfill';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {Provider} from 'react-redux';
-import {createStore} from 'redux';
-import todoApp from './reducers';
-import App from './components/App';
+import configureStore from './configureStore';
+import Root from './components/Root';
+
 //extra
 import expect from 'expect'; 
 import deepFreeze from 'deep-freeze';
 
 
-// const persistedState = {
-//     todos: [{
-//         id: '0',
-//         text: 'Welcome back!',
-//         completed: false
-//     }]
-// };
-
+const store = configureStore();
 
 ReactDOM.render(
-    <Provider store={createStore(todoApp)}>
-        <App />
-    </Provider>,
+    <Root store={store} />,
     document.getElementById('root')
 
 );
