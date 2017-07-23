@@ -1,21 +1,55 @@
+// NOTE: This was previously a generated container component
+// When we introduced the async API call, we changed this 
+// to require REACT and extends the Component class.
+// We did this so that we could use the lifecyle react hooks
+import React, {Component, PropTypes} from 'react'; 
+
 import { connect } from 'react-redux';
 import { withRouter } from 'react-router';
-import { toggleTodo } from '../actions';
+import * as actions from '../actions';
 import TodoList from './TodoList';
 import {getVisibleTodos} from '../reducers';
 
 
 
+class VisibleTodoList extends Component {
+
+    componentDidMount() {
+        this.fetchData();
+    }
+
+    componentDidUpdate(prevProps) {
+        if(this.props.filter !== prevProps.filter) {
+            this.fetchData();
+        }
+    }
+
+    fetchData() {
+        const {filter, fetchTodos} = this.props;
+        fetchTodos(filter).then(todos =>
+            fetchTodos(filter)
+        );
+    }
+
+
+    render() {
+        const { toggleTodo, ...rest } = this.props;
+        return <TodoList {...rest} onTodoClick={toggleTodo} />;
+
+    }
+}
+
+
 
 // The params parameter is provided by the withRouter function call below
-const mapStateToProps = (state, {params}) => (
-    {
-        todos: getVisibleTodos(
-            state,
-            params.filter || 'all'
-        )
-    }
-);
+const mapStateToProps = (state, {params}) => {
+    const filter = params.filter || 'all';
+    return {
+        todos: getVisibleTodos(state, filter),
+        filter
+    };
+};
+
 
 
 // Commenting out mapDispatchToProps
@@ -29,10 +63,15 @@ const mapStateToProps = (state, {params}) => (
 //         }
 //     }
 // );
-const VisibleTodoList = withRouter(connect(
+VisibleTodoList = withRouter(connect(
     mapStateToProps,
-    { onTodoClick: toggleTodo }
-)(TodoList));
+    actions
+)(VisibleTodoList));
 
+
+VisibleTodoList.propTypes = {
+    filter: PropTypes.string.isRequired,
+    receiveTodos: PropTypes.func.isRequired
+};
 
 export default VisibleTodoList;
